@@ -14,24 +14,35 @@ import {
 import { CartPanel } from "@/components/CartPanel";
 import { CheckoutModal } from "@/components/CheckoutModal";
 
-export function StorePage() {
-  const [menu, setMenu] = useState<MenuResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<string>("");
+type StorePageProps = {
+  initialMenu: MenuResponse | null;
+};
+
+export function StorePage({ initialMenu }: StorePageProps) {
+  const [menu, setMenu] = useState<MenuResponse | null>(initialMenu);
+  const [activeCategory, setActiveCategory] = useState<string>(
+    () => initialMenu?.categories?.[0]?.id ?? ""
+  );
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const { addItem, itemCount } = useCart();
 
   useEffect(() => {
     fetch("/api/menu")
-      .then((r) => r.json())
-      .then((data: MenuResponse) => {
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: MenuResponse | null) => {
+        if (!data?.categories?.length) return;
         setMenu(data);
-        if (data.categories?.[0]) {
-          setActiveCategory(data.categories[0].id);
-        }
+        setActiveCategory((current) => {
+          if (current && data.categories.some((c) => c.id === current)) {
+            return current;
+          }
+          return data.categories[0]?.id ?? "";
+        });
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        /* keep server-provided menu */
+      });
   }, []);
 
   useEffect(() => {
@@ -55,14 +66,6 @@ export function StorePage() {
   const scrollToMenu = useCallback(() => {
     document.getElementById("menu")?.scrollIntoView({ behavior: "smooth" });
   }, []);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen w-full min-w-0 items-center justify-center overflow-x-hidden bg-stone-50 text-stone-600">
-        Loading menu…
-      </div>
-    );
-  }
 
   if (!menu?.categories?.length) {
     return (

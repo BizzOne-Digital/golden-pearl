@@ -1,5 +1,7 @@
 import { StorePage } from "@/components/StorePage";
+import { getMenuFromFile } from "@/lib/get-menu";
 
 export default function Home() {
-  return <StorePage />;
+  const initialMenu = getMenuFromFile();
+  return <StorePage initialMenu={initialMenu} />;
 }
