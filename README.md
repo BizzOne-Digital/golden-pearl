@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Golden Pearl — Online Food Store
 
-## Getting Started
+Single-folder Next.js app (store + API + admin) with MongoDB Atlas.
 
-First, run the development server:
+## Features
+
+- One-page store: hero, category tabs, product grid, cart, checkout
+- MongoDB Atlas for menu + orders
+- Admin at `/admin` — orders + sound on new **paid** orders
+- Stripe Checkout optional; without Stripe, demo payment marks orders paid
+
+## Local development
+
+1. Copy `.env.example` → `.env.local` and set variables (see below).
+2. `npm run scrape-menu` (optional — refreshes `data/menu.json` + images)
+3. `npm run seed`
+4. Add `public/sounds/order-notification.mp3` for admin alerts
+5. `npm run dev` → http://localhost:3000
+
+## Production
+
+### 1. Build (verified)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+npm run build
+npm run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Runs on `PORT` (default **3000**). Use a process manager (PM2, Docker, or your host’s Node app).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Environment variables (hosting dashboard)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Required | Notes |
+|----------|----------|--------|
+| `MONGODB_URI` | Yes | Atlas connection string; allow your server IP in Atlas Network Access |
+| `ADMIN_EMAIL` | Yes | Admin login email |
+| `ADMIN_PASSWORD` | Yes | Use a **strong** password in production |
+| `ADMIN_JWT_SECRET` | Recommended | Long random string (session signing) |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public URL, e.g. `https://yourdomain.com` |
+| `STRIPE_SECRET_KEY` | For live pay | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | With Stripe | Webhook: `POST /api/webhooks/stripe` |
 
-## Learn More
+Do **not** commit `.env.local`. Set secrets only in the host.
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Database
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+After deploy, from your machine (with `MONGODB_URI` in `.env.local`):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run seed
+```
 
-## Deploy on Vercel
+Re-run after menu updates (`npm run scrape-menu` then `npm run seed`).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 4. Deploy on Vercel (example)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Import repo, root directory: `food-store`
+2. Add all env vars above
+3. Deploy — build command: `npm run build`, output: Next.js default
+4. Run `npm run seed` locally against production `MONGODB_URI`
+5. Stripe webhook URL: `https://yourdomain.com/api/webhooks/stripe`
+
+### 5. Post-deploy checklist
+
+- [ ] Store loads menu from MongoDB
+- [ ] Test order + checkout (Stripe or demo mode)
+- [ ] `/admin` login works; notification sound file present
+- [ ] MongoDB Atlas IP / Vercel IP allowlist configured
+- [ ] `NEXT_PUBLIC_APP_URL` matches live domain
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run scrape-menu` | Pull menu + download images to `public/menu/` |
+| `npm run seed` | Upsert menu into MongoDB |
+| `npm run build` | Production build |
+| `npm run start` | Serve production build |
