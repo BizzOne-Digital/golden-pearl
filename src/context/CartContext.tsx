@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { CartLine } from "@/types/menu";
+import { taxFromSubtotal, totalFromSubtotal } from "@/lib/pricing";
 
 type CartContextValue = {
   lines: CartLine[];
@@ -17,6 +18,8 @@ type CartContextValue = {
   removeLine: (key: string) => void;
   clear: () => void;
   subtotal: number;
+  tax: number;
+  total: number;
   itemCount: number;
 };
 
@@ -77,6 +80,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [lines]
   );
 
+  const tax = useMemo(() => taxFromSubtotal(subtotal), [subtotal]);
+
+  const total = useMemo(() => totalFromSubtotal(subtotal), [subtotal]);
+
   const itemCount = useMemo(
     () => lines.reduce((s, l) => s + l.quantity, 0),
     [lines]
@@ -90,9 +97,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeLine,
       clear,
       subtotal,
+      tax,
+      total,
       itemCount,
     }),
-    [lines, addItem, updateQty, removeLine, clear, subtotal, itemCount]
+    [lines, addItem, updateQty, removeLine, clear, subtotal, tax, total, itemCount]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

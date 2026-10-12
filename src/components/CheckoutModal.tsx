@@ -2,17 +2,19 @@
 
 import { FormEvent, useState } from "react";
 import { useCart } from "@/context/CartContext";
-import { formatCurrency } from "@/lib/format";
+import { OrderTotals } from "@/components/OrderTotals";
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  onDemoPaid?: (orderNumber: string) => void;
 };
 
-export function CheckoutModal({ open, onClose }: Props) {
-  const { lines, subtotal, clear } = useCart();
+export function CheckoutModal({ open, onClose, onDemoPaid }: Props) {
+  const { lines, subtotal, tax, total, clear } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [orderType, setOrderType] = useState<"pickup" | "delivery">("pickup");
 
   if (!open) return null;
 
@@ -22,12 +24,22 @@ export function CheckoutModal({ open, onClose }: Props) {
     setSubmitting(true);
 
     const form = new FormData(e.currentTarget);
+    const selectedType =
+      (form.get("orderType") as "pickup" | "delivery") || "pickup";
+    const address = String(form.get("address") || "").trim();
+
+    if (selectedType === "delivery" && !address) {
+      setError("Please enter your delivery address.");
+      setSubmitting(false);
+      return;
+    }
+
     const payload = {
       customerName: String(form.get("name") || ""),
       email: String(form.get("email") || ""),
       phone: String(form.get("phone") || ""),
-      orderType: (form.get("orderType") as "pickup" | "delivery") || "pickup",
-      address: String(form.get("address") || ""),
+      orderType: selectedType,
+      address,
       notes: String(form.get("notes") || ""),
       items: lines.map((l) => ({
         productId: l.productId,
@@ -49,7 +61,6 @@ export function CheckoutModal({ open, onClose }: Props) {
       if (!res.ok) throw new Error(data.error || "Checkout failed");
 
       if (data.checkoutUrl) {
-        clear();
         window.location.href = data.checkoutUrl;
         return;
       }
@@ -61,13 +72,12 @@ export function CheckoutModal({ open, onClose }: Props) {
         const payData = await payRes.json();
         if (!payRes.ok) throw new Error(payData.error || "Payment failed");
         clear();
-        alert(`Order ${payData.orderNumber} placed and marked paid (demo mode).`);
+        onDemoPaid?.(payData.orderNumber);
         onClose();
         return;
       }
 
       clear();
-      alert(`Order ${data.orderNumber} created.`);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -87,8 +97,15 @@ export function CheckoutModal({ open, onClose }: Props) {
       <div className="relative max-h-[92dvh] w-full max-w-lg min-w-0 overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl sm:max-h-[90vh] sm:rounded-2xl sm:p-6">
         <h2 className="text-xl font-semibold">Checkout</h2>
         <p className="mt-1 text-sm text-stone-500">
-          Total: {formatCurrency(subtotal)}
+          Enter your details, then pay securely with Stripe.
         </p>
+
+        <OrderTotals
+          subtotal={subtotal}
+          tax={tax}
+          total={total}
+          className="mt-4 rounded-xl bg-stone-50 p-4"
+        />
 
         <form onSubmit={onSubmit} className="mt-6 w-full min-w-0 space-y-4">
           <label className="block w-full min-w-0 text-sm">
@@ -96,6 +113,7 @@ export function CheckoutModal({ open, onClose }: Props) {
             <input
               name="name"
               required
+              autoComplete="name"
               className="mt-1 w-full max-w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2"
             />
           </label>
@@ -105,6 +123,7 @@ export function CheckoutModal({ open, onClose }: Props) {
               name="email"
               type="email"
               required
+              autoComplete="email"
               className="mt-1 w-full max-w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2"
             />
           </label>
@@ -112,7 +131,9 @@ export function CheckoutModal({ open, onClose }: Props) {
             <span className="font-medium">Phone</span>
             <input
               name="phone"
+              type="tel"
               required
+              autoComplete="tel"
               className="mt-1 w-full max-w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2"
             />
           </label>
@@ -120,6 +141,10 @@ export function CheckoutModal({ open, onClose }: Props) {
             <span className="font-medium">Order type</span>
             <select
               name="orderType"
+              value={orderType}
+              onChange={(e) =>
+                setOrderType(e.target.value as "pickup" | "delivery")
+              }
               className="mt-1 w-full max-w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2"
             >
               <option value="pickup">Pick up</option>
@@ -127,9 +152,13 @@ export function CheckoutModal({ open, onClose }: Props) {
             </select>
           </label>
           <label className="block text-sm">
-            <span className="font-medium">Address (delivery)</span>
+            <span className="font-medium">
+              Address {orderType === "delivery" ? "(required)" : "(optional)"}
+            </span>
             <input
               name="address"
+              required={orderType === "delivery"}
+              autoComplete="street-address"
               className="mt-1 w-full max-w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2"
             />
           </label>
@@ -149,7 +178,7 @@ export function CheckoutModal({ open, onClose }: Props) {
             disabled={submitting || lines.length === 0}
             className="w-full rounded-xl bg-[#a20302] py-3 font-medium text-white disabled:opacity-50"
           >
-            {submitting ? "Processing…" : "Place order & pay"}
+            {submitting ? "Please wait…" : "Pay now"}
           </button>
         </form>
       </div>

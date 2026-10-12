@@ -15,6 +15,8 @@ type OrderRow = {
   notes?: string;
   items: { name: string; quantity: number; price: number }[];
   subtotal: number;
+  taxAmount?: number;
+  total?: number;
   status: string;
   paidAt?: string;
   createdAt: string;
@@ -217,11 +219,17 @@ export function AdminDashboard() {
                         : "bg-amber-100 text-amber-800"
                     }`}
                   >
-                    {order.status}
+                    {order.status === "paid" ? "Paid" : order.status}
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-stone-500">
-                  {order.orderType} · {formatCurrency(order.subtotal)}
+                  {order.orderType} · {formatCurrency(order.total ?? order.subtotal)}
+                  {(order.taxAmount ?? 0) > 0 && (
+                    <span className="text-stone-400">
+                      {" "}
+                      (incl. {formatCurrency(order.taxAmount ?? 0)} tax)
+                    </span>
+                  )}
                 </p>
                 <ul className="mt-3 border-t border-stone-100 pt-3 text-sm">
                   {order.items.map((item, i) => (

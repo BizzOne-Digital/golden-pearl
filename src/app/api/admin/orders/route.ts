@@ -23,6 +23,8 @@ export async function GET() {
       notes: o.notes,
       items: o.items,
       subtotal: o.subtotal,
+      taxAmount: o.taxAmount ?? 0,
+      total: o.total ?? o.subtotal,
       status: o.status,
       paidAt: o.paidAt,
       createdAt: o.createdAt,

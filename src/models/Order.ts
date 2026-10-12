@@ -27,6 +27,8 @@ const OrderSchema = new Schema(
     notes: { type: String, default: "" },
     items: [OrderItemSchema],
     subtotal: { type: Number, required: true },
+    taxAmount: { type: Number, default: 0 },
+    total: { type: Number, required: true },
     status: {
       type: String,
       enum: ["pending_payment", "paid", "cancelled"],

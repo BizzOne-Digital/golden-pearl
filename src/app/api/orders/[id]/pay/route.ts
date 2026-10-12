@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Order } from "@/models/Order";
+import { taxFromSubtotal, totalFromSubtotal } from "@/lib/pricing";
 
 export async function POST(
   _req: NextRequest,
@@ -18,6 +19,12 @@ export async function POST(
     return NextResponse.json({ ok: true, orderNumber: order.orderNumber });
   }
 
+  if (order.taxAmount == null || order.taxAmount === 0) {
+    order.taxAmount = taxFromSubtotal(order.subtotal);
+  }
+  if (order.total == null || order.total === 0) {
+    order.total = totalFromSubtotal(order.subtotal);
+  }
   order.status = "paid";
   order.paidAt = new Date();
   await order.save();

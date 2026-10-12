@@ -13,6 +13,7 @@ import {
 } from "@/data/location";
 import { CartPanel } from "@/components/CartPanel";
 import { CheckoutModal } from "@/components/CheckoutModal";
+import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 
 type StorePageProps = {
   initialMenu: MenuResponse | null;
@@ -25,7 +26,8 @@ export function StorePage({ initialMenu }: StorePageProps) {
   );
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const { addItem, itemCount } = useCart();
+  const [successOrder, setSuccessOrder] = useState<string | null>(null);
+  const { addItem, itemCount, clear } = useCart();
 
   useEffect(() => {
     fetch("/api/menu")
@@ -47,11 +49,41 @@ export function StorePage({ initialMenu }: StorePageProps) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("paid") === "1") {
-      alert(`Thank you! Order ${params.get("order") || ""} is confirmed.`);
+    if (params.get("cancelled") === "1") {
+      window.history.replaceState({}, "", "/");
+      return;
+    }
+    if (params.get("paid") !== "1") return;
+
+    const orderNum = params.get("order") || "";
+    const sessionId = params.get("session_id");
+
+    async function confirmPayment() {
+      if (sessionId) {
+        try {
+          const res = await fetch("/api/orders/complete-checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            clear();
+            setSuccessOrder(data.orderNumber || orderNum);
+            window.history.replaceState({}, "", "/");
+            return;
+          }
+        } catch {
+          /* webhook may have already marked paid */
+        }
+      }
+      clear();
+      setSuccessOrder(orderNum);
       window.history.replaceState({}, "", "/");
     }
-  }, []);
+
+    void confirmPayment();
+  }, [clear]);
 
   const activeCategoryData = useMemo(
     () => menu?.categories.find((c) => c.id === activeCategory),
@@ -318,7 +350,15 @@ export function StorePage({ initialMenu }: StorePageProps) {
       <CheckoutModal
         open={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
+        onDemoPaid={(orderNumber) => setSuccessOrder(orderNumber)}
       />
+
+      {successOrder && (
+        <OrderSuccessModal
+          orderNumber={successOrder}
+          onClose={() => setSuccessOrder(null)}
+        />
+      )}
     </div>
   );
 }

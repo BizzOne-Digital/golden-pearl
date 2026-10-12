@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@/context/CartContext";
+import { OrderTotals } from "@/components/OrderTotals";
 import { formatCurrency } from "@/lib/format";
 import { resolveMenuImage } from "@/lib/menu-image";
 
@@ -11,7 +12,7 @@ type Props = {
 };
 
 export function CartPanel({ open, onClose, onCheckout }: Props) {
-  const { lines, updateQty, removeLine, subtotal, clear } = useCart();
+  const { lines, updateQty, removeLine, subtotal, tax, total, clear } = useCart();
 
   if (!open) return null;
 
@@ -87,10 +88,7 @@ export function CartPanel({ open, onClose, onCheckout }: Props) {
         </div>
 
         <div className="border-t border-stone-200 p-4">
-          <div className="mb-4 flex justify-between text-base font-semibold">
-            <span>Subtotal</span>
-            <span>{formatCurrency(subtotal)}</span>
-          </div>
+          <OrderTotals subtotal={subtotal} tax={tax} total={total} className="mb-4" />
           <button
             type="button"
             disabled={lines.length === 0}

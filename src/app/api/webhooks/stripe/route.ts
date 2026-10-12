@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { connectDB } from "@/lib/mongodb";
-import { Order } from "@/models/Order";
+import { markOrderPaidFromCheckoutSession } from "@/lib/stripe-order";
 
 export async function POST(req: NextRequest) {
   const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -26,15 +25,7 @@ export async function POST(req: NextRequest) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    const orderId = session.metadata?.orderId;
-    if (orderId) {
-      await connectDB();
-      await Order.findByIdAndUpdate(orderId, {
-        status: "paid",
-        paidAt: new Date(),
-        stripeSessionId: session.id,
-      });
-    }
+    await markOrderPaidFromCheckoutSession(session);
   }
 
   return NextResponse.json({ received: true });

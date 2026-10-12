@@ -38,7 +38,8 @@ Runs on `PORT` (default **3000**). Use a process manager (PM2, Docker, or your h
 | `ADMIN_PASSWORD` | Yes | Use a **strong** password in production |
 | `ADMIN_JWT_SECRET` | Recommended | Long random string (session signing) |
 | `NEXT_PUBLIC_APP_URL` | Yes | Public URL, e.g. `https://yourdomain.com` |
-| `STRIPE_SECRET_KEY` | For live pay | Stripe secret key |
+| `STRIPE_SECRET_KEY` | For live pay | Live secret key `sk_live_...` |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Optional | Live publishable `pk_live_...` (for future client Stripe UI) |
 | `STRIPE_WEBHOOK_SECRET` | With Stripe | Webhook: `POST /api/webhooks/stripe` |
 
 Do **not** commit `.env.local`. Set secrets only in the host.
